@@ -1,4 +1,5 @@
 requests>=2.31
+pyyaml>=6.0
 pyspark>=3.5
 datasketch>=1.6
 trafilatura>=1.8

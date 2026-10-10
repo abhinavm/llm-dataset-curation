@@ -1,0 +1,26 @@
+# Pipeline thresholds. Edit here instead of in code -- these are the knobs
+# a reviewer or future-you would actually want to tune per corpus, without
+# touching the implementation.
+
+filter:
+  min_words: 50
+  # Safety ceiling against corrupted/concatenated files, not a quality
+  # signal -- tuned for whole-book documents (War and Peace runs ~590k
+  # words and is legitimate), not scraped web pages.
+  max_words: 700000
+  max_symbol_ratio: 0.1
+  max_top_line_repeat_ratio: 0.3
+  min_mean_word_length: 2.0
+  max_mean_word_length: 10.0
+
+dedup:
+  # Jaccard similarity threshold for MinHash LSH near-dedup. 0.8 is the
+  # common starting point from the C4/Gopher pretraining-data literature.
+  near_dedup_threshold: 0.8
+  minhash_num_perm: 128
+
+tokenize:
+  max_tokens_per_chunk: 2048
+
+ingest:
+  language: en

@@ -17,12 +17,32 @@ import requests
 
 GUTENDEX_BASE = "https://gutendex.com/books"
 _TEXT_FORMAT_KEYS = ("text/plain; charset=utf-8", "text/plain; charset=us-ascii", "text/plain")
+_MAX_RETRIES = 3
 
 
 def iter_local_raw(raw_dir: Path) -> Iterator[tuple[str, bytes]]:
     """Read already-downloaded raw files from disk."""
     for path in sorted(raw_dir.glob("*.txt")):
         yield path.stem, path.read_bytes()
+
+
+def _get_with_retry(url: str, params: dict | None = None) -> requests.Response | None:
+    """GET with exponential backoff. Returns None (not an exception) if
+    every attempt fails -- a single flaky request against a free,
+    community-run API shouldn't kill a multi-hundred-book download; the
+    first version of this downloader had no retry at all and a single
+    timeout crashed the whole run partway through a 500-book batch.
+    """
+    for attempt in range(_MAX_RETRIES):
+        try:
+            resp = requests.get(url, params=params, timeout=30)
+            resp.raise_for_status()
+            return resp
+        except requests.RequestException:
+            if attempt == _MAX_RETRIES - 1:
+                return None
+            time.sleep(2**attempt)
+    return None
 
 
 def _iter_catalog(language: str, max_books: int) -> Iterator[dict]:
@@ -32,8 +52,9 @@ def _iter_catalog(language: str, max_books: int) -> Iterator[dict]:
     params = {"languages": language}
     seen = 0
     while url and seen < max_books:
-        resp = requests.get(url, params=params, timeout=30)
-        resp.raise_for_status()
+        resp = _get_with_retry(url, params=params)
+        if resp is None:
+            return  # catalog is unreachable even after retries; stop here with what we have
         payload = resp.json()
         for book in payload.get("results", []):
             if seen >= max_books:
@@ -72,8 +93,8 @@ def download_corpus(raw_dir: Path, max_books: int, language: str = "en") -> list
         if text_url is None:
             continue
 
-        resp = requests.get(text_url, timeout=30)
-        if resp.status_code != 200:
+        resp = _get_with_retry(text_url)
+        if resp is None:
             continue
 
         dest.write_bytes(resp.content)
