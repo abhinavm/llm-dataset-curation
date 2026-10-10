@@ -17,13 +17,20 @@ class StageMetrics:
         return self.input_count - self.output_count
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "stage": self.stage,
             "input_count": self.input_count,
             "output_count": self.output_count,
-            "dropped": self.dropped,
-            "drop_reasons": dict(self.drop_reasons),
         }
+        # Most stages filter (output <= input, e.g. dedup, quality_filter).
+        # Chunking stages like tokenize expand count instead -- report that
+        # distinctly rather than showing a misleading negative "dropped".
+        if self.output_count >= self.input_count:
+            d["expanded_by"] = self.output_count - self.input_count
+        else:
+            d["dropped"] = self.dropped
+            d["drop_reasons"] = dict(self.drop_reasons)
+        return d
 
 
 class Report:

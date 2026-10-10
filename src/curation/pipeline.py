@@ -10,14 +10,14 @@ import argparse
 import json
 from pathlib import Path
 
-from curation import dedup, export, filter as quality_filter, ingest, metrics, tokenize
+from curation import dedup, export, filter as quality_filter, ingest, metrics, parse, tokenize
 
 
 def run(raw_dir: Path, out_path: Path) -> metrics.Report:
     report = metrics.Report()
 
     raw_docs = list(ingest.iter_local_raw(raw_dir))
-    docs = [(doc_id, raw.decode("utf-8", errors="replace")) for doc_id, raw in raw_docs]
+    docs = [(doc_id, parse.parse_gutenberg(raw)) for doc_id, raw in raw_docs]
     report.record("ingest", input_count=len(docs), output_count=len(docs))
 
     deduped = list(dedup.exact_dedup(docs))

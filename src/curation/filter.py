@@ -14,7 +14,13 @@ SYMBOL_CHARS = set("#{}[]<>|\\^~`")
 @dataclass
 class FilterConfig:
     min_words: int = 50
-    max_words: int = 100_000
+    # Tuned for whole-book documents, not scraped web pages: this is a
+    # safety ceiling against corrupted/concatenated files, not a quality
+    # signal. War and Peace runs ~590k words and is a legitimate document;
+    # a 100k ceiling (reasonable for a web page) rejected real novels
+    # (Pride and Prejudice, the Sherlock Holmes collection, Moby Dick) the
+    # first time this ran against actual Gutenberg books.
+    max_words: int = 700_000
     max_symbol_ratio: float = 0.1
     max_top_line_repeat_ratio: float = 0.3
     min_mean_word_length: float = 2.0
